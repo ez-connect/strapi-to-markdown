@@ -21,6 +21,10 @@ func main() {
 		os.Setenv("GOARCH", arch)
 
 		output := fmt.Sprintf("%s/%s-%s-%s", buildDir, appName, v, arch)
+		if v == "windows" {
+			output = fmt.Sprintf("%s.exe", output)
+		}
+
 		cmd := exec.Command("go", "build", "-o", output, "-ldflags", "-s -w")
 		err := cmd.Run()
 		if err != nil {
