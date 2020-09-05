@@ -29,8 +29,11 @@ func markdown(data map[string]interface{}, body string, output string) error {
 
 	f.WriteString(string(buf))
 	f.WriteString("---\n\n")
-	f.WriteString(content)
-	f.WriteString("\n")
+
+	if content != "" {
+		f.WriteString(content)
+		f.WriteString("\n")
+	}
 
 	return nil
 }

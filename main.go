@@ -8,26 +8,54 @@ import (
 
 func main() {
 	/// Flag args
-	baseURL := *flag.String("baseURL", "http://localhost:1337", "Strapi base url")
-	singleTypes := *flag.String("single", "nav", "Single types, seperated by ,")
-	contentTypes := *flag.String("content", "post", "Single types, seperated by ,")
-	body := *flag.String("body", "body", "Body field")
-	output := *flag.String("output", "content", "Output location")
+	baseURL := flag.String("baseURL", "http://localhost:1337", "Strapi base url")
+	singleType := flag.String("single", "", "A single type name")
+	collectionType := flag.String("collection", "post", "A colletion type name")
+	body := flag.String("body", "body", "Field name to write to markdown content")
+	output := flag.String("output", "content", "Output directory")
+	name := flag.String("name", "slug", "Output file name for single type or a field name of collection type")
 
 	flag.Parse()
 
-	fmt.Println(baseURL)
-	fmt.Println(singleTypes)
-	fmt.Println(contentTypes)
-	fmt.Println(body)
-	fmt.Println(output)
-
-	data, err := find(baseURL, "posts")
-	if err != nil {
-		log.Fatal(err)
+	if *singleType == "" && *collectionType == "" {
+		log.Fatal("Missing type name")
 	}
 
-	fmt.Println(data)
+	if *output == "" {
+		log.Fatal("Missing output directory")
+	}
 
-	markdown(data[0], body, "test.md")
+	if *name == "" {
+		log.Fatal("Missing output file name")
+	}
+
+	/// Single type
+	if *singleType != "" {
+		data, err := findOne(*baseURL, *singleType)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = markdown(data, "", fmt.Sprintf("%s/%s.md", *output, *name))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	/// Collection type
+	if *collectionType != "" {
+		data, err := find(*baseURL, fmt.Sprintf("%ss", *collectionType))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, v := range data {
+			date := fmt.Sprintf("%s", v["created_at"])[0:10]
+			filename := fmt.Sprintf("%s-%s", date, v[*name])
+			err = markdown(v, *body, fmt.Sprintf("%s/%s.md", *output, filename))
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
 }
