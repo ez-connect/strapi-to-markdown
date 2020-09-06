@@ -6,14 +6,20 @@ import (
 	"log"
 )
 
+const appVersion = "v0.0.2"
+
 func main() {
+	fmt.Println("Strapi to markdown", appVersion)
+
 	/// Flag args
 	baseURL := flag.String("baseURL", "http://localhost:1337", "Strapi base url")
 	singleType := flag.String("single", "", "A single type name")
-	collectionType := flag.String("collection", "post", "A colletion type name")
-	body := flag.String("body", "body", "Field name to write to markdown content")
-	output := flag.String("output", "content", "Output directory")
-	name := flag.String("name", "slug", "Output file name for single type or a field name of collection type")
+	collectionType := flag.String("collection", "", "A colletion type name")
+	body := flag.String("body", "", "Field name to write to markdown content")
+	exclude := flag.String("exclude", "", "Exclude field name")
+	output := flag.String("output", "", "Output directory")
+	staticDir := flag.String("static", "static", "Static directory")
+	name := flag.String("name", "", "Output file name for single type or a field name of collection type")
 
 	flag.Parse()
 
@@ -36,7 +42,10 @@ func main() {
 			log.Fatal(err)
 		}
 
-		err = markdown(data, "", fmt.Sprintf("%s/%s.md", *output, *name))
+		err = markdown(
+			data, *body, *exclude, fmt.Sprintf("%s/%s.md", *output, *name),
+			*baseURL, *staticDir,
+		)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -52,7 +61,10 @@ func main() {
 		for _, v := range data {
 			date := fmt.Sprintf("%s", v["created_at"])[0:10]
 			filename := fmt.Sprintf("%s-%s", date, v[*name])
-			err = markdown(v, *body, fmt.Sprintf("%s/%s.md", *output, filename))
+			err = markdown(v, *body, *exclude, fmt.Sprintf(
+				"%s/%s.md", *output, filename),
+				*baseURL, *staticDir,
+			)
 			if err != nil {
 				log.Fatal(err)
 			}
