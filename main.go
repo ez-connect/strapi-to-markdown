@@ -1,73 +1,69 @@
 package main
 
 import (
+	"app/util"
 	"flag"
 	"fmt"
-	"log"
 )
 
-const appVersion = "v0.0.2"
+const (
+	_version    = "v0.1.0"
+	_baseURL    = "http://localhost:1337"
+	_contentDir = "content"
+	_mediaDir   = "static/images"
+)
 
 func main() {
-	fmt.Println("Strapi to markdown", appVersion)
+	fmt.Println("Strapi to markdown", _version)
 
 	/// Flag args
-	baseURL := flag.String("baseURL", "http://localhost:1337", "Strapi base url")
-	singleType := flag.String("single", "", "A single type name")
-	collectionType := flag.String("collection", "", "A colletion type name")
-	body := flag.String("body", "", "Field name to write to markdown content")
-	exclude := flag.String("exclude", "", "Exclude field name")
-	output := flag.String("output", "", "Output directory")
-	staticDir := flag.String("static", "static", "Static directory")
-	name := flag.String("name", "", "Output file name for single type or a field name of collection type")
-
+	baseURL := flag.String("b", _baseURL, "Base URL")
+	path := flag.String("p", "articles", "Strapi base url")
+	isSingle := flag.Bool("s", false, "Fetch single record")
+	exclude := flag.String("e", "", "Exclude field name")
+	contentDir := flag.String("c", _contentDir, "Output directory")
+	mediaDir := flag.String("m", _mediaDir, "Static directory")
 	flag.Parse()
 
-	if *singleType == "" && *collectionType == "" {
-		log.Fatal("Missing type name")
+	if *contentDir == "" {
+		panic("Missing content output directory")
 	}
 
-	if *output == "" {
-		log.Fatal("Missing output directory")
+	if *mediaDir == "" {
+		panic("Missing media output directory")
 	}
 
-	if *name == "" {
-		log.Fatal("Missing output file name")
-	}
-
-	/// Single type
-	if *singleType != "" {
-		data, err := findOne(*baseURL, *singleType)
+	if !*isSingle {
+		data, err := util.Find(*baseURL, *path)
 		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = markdown(
-			data, *body, *exclude, fmt.Sprintf("%s/%s.md", *output, *name),
-			*baseURL, *staticDir,
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	/// Collection type
-	if *collectionType != "" {
-		data, err := find(*baseURL, fmt.Sprintf("%ss", *collectionType))
-		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 		for _, v := range data {
-			date := fmt.Sprintf("%s", v["created_at"])[0:10]
-			filename := fmt.Sprintf("%s-%s", date, v[*name])
-			err = markdown(v, *body, *exclude, fmt.Sprintf(
-				"%s/%s.md", *output, filename),
-				*baseURL, *staticDir,
-			)
+			err := util.WriteMarkdown(v, *exclude, *contentDir, *mediaDir)
 			if err != nil {
-				log.Fatal(err)
+				panic(err)
 			}
+
+			// Download media
+			if err := util.WriteMedia(*baseURL, *path, v, *mediaDir); err != nil {
+				panic(err)
+			}
+		}
+	} else {
+		data, err := util.FindOne(*baseURL, *path)
+		if err != nil {
+			panic(err)
+		}
+
+		err = util.WriteMarkdown(data, *exclude, *contentDir, *mediaDir)
+		if err != nil {
+			panic(err)
+		}
+
+		// Download media
+		if err := util.WriteMedia(*baseURL, *path, data, *mediaDir); err != nil {
+			panic(err)
 		}
 	}
 }
