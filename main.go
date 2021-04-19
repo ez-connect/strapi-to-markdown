@@ -1,9 +1,10 @@
 package main
 
 import (
-	"app/util"
 	"flag"
 	"fmt"
+
+	"app/lib"
 )
 
 const (
@@ -17,8 +18,10 @@ func main() {
 	fmt.Println("Strapi to markdown", _version)
 
 	/// Flag args
+	username := flag.String("u", "", "User name")
+	password := flag.String("p", "", "Password")
 	baseURL := flag.String("b", _baseURL, "Base URL")
-	path := flag.String("p", "articles", "Strapi base url")
+	path := flag.String("P", "articles", "Strapi base url")
 	isSingle := flag.Bool("s", false, "Fetch single record")
 	exclude := flag.String("e", "", "Exclude field name")
 	contentDir := flag.String("c", _contentDir, "Output directory")
@@ -33,36 +36,49 @@ func main() {
 		panic("Missing media output directory")
 	}
 
+	strapi := lib.Strapi{}
+	strapi.SetBaseURL(*baseURL)
+	markdown := lib.Markdown{}
+	markdown.SetBaseURL(*baseURL)
+
+	if *username != "" {
+		if jwt, err := strapi.SignIn(*username, *password); err == nil {
+			markdown.SetJWT(jwt)
+		} else {
+			panic(err)
+		}
+	}
+
 	if !*isSingle {
-		data, err := util.Find(*baseURL, *path)
+		data, err := strapi.Find(*path)
 		if err != nil {
 			panic(err)
 		}
 
 		for _, v := range data {
-			err := util.WriteMarkdown(v, *exclude, *contentDir, *mediaDir)
+			err := markdown.Write(v, *exclude, *contentDir, *mediaDir)
 			if err != nil {
 				panic(err)
 			}
 
 			// Download media
-			if err := util.WriteMedia(*baseURL, *path, v, *mediaDir); err != nil {
+			if err := markdown.WriteMedia(*path, v, *mediaDir); err != nil {
 				panic(err)
 			}
 		}
 	} else {
-		data, err := util.FindOne(*baseURL, *path)
+		data, err := strapi.FindOne(*path)
 		if err != nil {
 			panic(err)
 		}
 
-		err = util.WriteMarkdown(data, *exclude, *contentDir, *mediaDir)
+		err = markdown.Write(data, *exclude, *contentDir, *mediaDir)
 		if err != nil {
 			panic(err)
 		}
 
 		// Download media
-		if err := util.WriteMedia(*baseURL, *path, data, *mediaDir); err != nil {
+		if err := markdown.WriteMedia(*path, data, *mediaDir); err != nil {
 			panic(err)
 		}
 	}

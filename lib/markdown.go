@@ -1,4 +1,4 @@
-package util
+package lib
 
 import (
 	"fmt"
@@ -22,7 +22,19 @@ import (
 // 	return data
 // }
 
-func WriteMarkdown(data map[string]interface{}, exclude, contentDir, mediaDir string) error {
+type Markdown struct {
+	rest Rest
+}
+
+func (m *Markdown) SetBaseURL(value string) {
+	m.rest.SetBaseURL(value)
+}
+
+func (m *Markdown) SetJWT(value string) {
+	m.rest.SetJWT(value)
+}
+
+func (m *Markdown) Write(data map[string]interface{}, exclude, contentDir, mediaDir string) error {
 	slug := slug.Make(fmt.Sprintf("%v", data["title"]))
 	name := fmt.Sprintf("%s-%v", slug, data["id"])
 	category := ""
@@ -81,7 +93,7 @@ func WriteMarkdown(data map[string]interface{}, exclude, contentDir, mediaDir st
 	return nil
 }
 
-func WriteMedia(baseURL string, path string, data map[string]interface{}, mediaDir string) error {
+func (m *Markdown) WriteMedia(path string, data map[string]interface{}, mediaDir string) error {
 	content := ""
 	if data["content"] != nil {
 		content = fmt.Sprintf("%s", data["content"])
@@ -93,7 +105,7 @@ func WriteMedia(baseURL string, path string, data map[string]interface{}, mediaD
 	for _, v := range match {
 		if len(v) > 0 {
 			path := v[1]
-			if err := download(baseURL, path, mediaDir); err != nil {
+			if err := m.rest.Download(path, mediaDir); err != nil {
 				return err
 			}
 		}
